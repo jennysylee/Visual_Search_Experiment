@@ -1,5 +1,0 @@
-{
-  "name": "Visual Search Experiment - Cognitive Psychology (PSY2001)",
-  "description": "A feature-rich Visual Search Task experiment for students. Participants search for targets among distractors with varying set sizes. Includes automated data collection, results visualization, and data export features.",
-  "requestFramePermissions": []
-}
