@@ -76,10 +76,14 @@
                             setSize: size,
                             targetPresent: i < (TRIALS_PER_SET / 2),
                             startTime: 0,
+                            rt: null,
+                            isCorrect: null,
+                            response: null
                         });
                     }
                 });
                 setTrials(newTrials.sort(() => Math.random() - 0.5));
+                setCurrentTrialIdx(0);
                 setState(ExperimentState.INSTRUCTIONS);
             };
 
@@ -102,6 +106,11 @@
                     return;
                 }
                 const trial = trials[currentTrialIdx];
+                if (!trial) {
+                    setState(ExperimentState.RESULTS);
+                    return;
+                }
+
                 setCurrentStimuli(generateStimuli(trial.setSize, trial.targetPresent));
                 setState(ExperimentState.FIXATION);
                 
@@ -110,7 +119,9 @@
                     trialInProgress.current = true;
                     setTrials(prev => {
                         const updated = [...prev];
-                        updated[currentTrialIdx].startTime = Date.now();
+                        if (updated[currentTrialIdx]) {
+                            updated[currentTrialIdx].startTime = Date.now();
+                        }
                         return updated;
                     });
                 }, 500 + Math.random() * 500);
@@ -122,6 +133,8 @@
                 
                 const endTime = Date.now();
                 const trial = trials[currentTrialIdx];
+                if (!trial) return;
+
                 const rt = endTime - trial.startTime;
                 let isCorrect = false;
                 let responseStr = 'timeout';
@@ -148,7 +161,7 @@
                     } else {
                         setCurrentTrialIdx(nextIdx);
                     }
-                }, 800);
+                }, 1000);
             }, [state, currentTrialIdx, trials]);
 
             useEffect(() => {
@@ -158,16 +171,15 @@
                 }
             }, [state, handleResponse]);
 
-            // Triggers next trial when trial index updates and we aren't at the end
             useEffect(() => {
                 if (state === ExperimentState.FEEDBACK && feedbackMessage === null) {
-                    if (currentTrialIdx < trials.length) {
+                    if (currentTrialIdx < trials.length && trials.length > 0) {
                         nextTrial();
-                    } else {
+                    } else if (trials.length > 0) {
                         setState(ExperimentState.RESULTS);
                     }
                 }
-            }, [currentTrialIdx, state, feedbackMessage, nextTrial, trials.length]);
+            }, [state, feedbackMessage, currentTrialIdx, trials.length, nextTrial]);
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -213,7 +225,7 @@
                     React.createElement('div', { className: "bg-gray-800 text-white px-6 py-4 flex justify-between items-center z-10" },
                         React.createElement('h1', { className: "text-xl font-bold tracking-tight" }, "Visual Search Lab"),
                         React.createElement('div', { className: "flex items-center gap-4" },
-                            (state === ExperimentState.FIXATION || state === ExperimentState.TRIAL || state === ExperimentState.FEEDBACK) && 
+                            (state !== ExperimentState.SETUP && state !== ExperimentState.RESULTS) && 
                             React.createElement('span', { className: "text-xs font-medium text-gray-400" }, `Trial ${Math.min(currentTrialIdx + 1, trials.length)} / ${trials.length}`),
                             participantId && React.createElement('span', { className: "text-sm bg-gray-700 px-3 py-1 rounded-full border border-gray-600" }, `ID: ${participantId}`)
                         )
@@ -263,15 +275,15 @@
                     ),
                     state === ExperimentState.RESULTS && React.createElement('div', { className: "flex-1 flex flex-col p-8 overflow-y-auto bg-gray-50" },
                         React.createElement('div', { className: "flex items-center justify-between mb-8" },
-                            React.createElement('h2', { className: "text-3xl font-bold text-gray-800" }, `Results: ID #${participantId}`),
+                            React.createElement('h2', { className: "text-3xl font-bold text-gray-800" }, `Results Summary`),
                             React.createElement('div', { className: "flex gap-3" },
                                 React.createElement('button', { onClick: () => window.location.reload(), className: "px-5 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-200 transition-colors" }, "Restart"),
-                                React.createElement('button', { onClick: downloadResults, className: "px-5 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all" }, "Download CSV")
+                                React.createElement('button', { onClick: downloadResults, className: "px-5 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-md" }, "Download CSV")
                             )
                         ),
                         React.createElement('div', { className: "grid grid-cols-1 lg:grid-cols-2 gap-8" },
                             React.createElement('div', { className: "bg-white p-6 rounded-2xl shadow-sm border border-gray-200" },
-                                React.createElement('h3', { className: "text-lg font-bold mb-6" }, "Reaction Time (ms) per Set Size"),
+                                React.createElement('h3', { className: "text-lg font-bold mb-6" }, "Mean RT (ms) by Set Size"),
                                 React.createElement('div', { className: "h-64" },
                                     React.createElement(ResponsiveContainer, { width: "100%", height: "100%" },
                                         React.createElement(BarChart, { data: chartData },
@@ -285,15 +297,19 @@
                                 )
                             ),
                             React.createElement('div', { className: "bg-white p-6 rounded-2xl shadow-sm border border-gray-200" },
-                                React.createElement('h3', { className: "text-lg font-bold mb-4" }, "Accuracy Statistics"),
+                                React.createElement('h3', { className: "text-lg font-bold mb-4" }, "Accuracy & Completion"),
                                 React.createElement('div', { className: "space-y-4" },
-                                    React.createElement('div', { className: "flex justify-between items-center p-3 bg-gray-50 rounded-lg" },
-                                        React.createElement('span', null, "Total Correct"),
-                                        React.createElement('span', { className: "font-bold text-green-600" }, `${trials.filter(t => t.isCorrect).length} / ${trials.length}`)
+                                    React.createElement('div', { className: "flex justify-between items-center p-4 bg-gray-50 rounded-xl" },
+                                        React.createElement('span', { className: "text-gray-600" }, "Total Trials Completed"),
+                                        React.createElement('span', { className: "font-bold text-gray-900" }, `${trials.length}`)
                                     ),
-                                    React.createElement('div', { className: "flex justify-between items-center p-3 bg-gray-50 rounded-lg" },
-                                        React.createElement('span', null, "Avg. Accuracy"),
-                                        React.createElement('span', { className: "font-bold" }, `${Math.round((trials.filter(t => t.isCorrect).length / trials.length) * 100)}%`)
+                                    React.createElement('div', { className: "flex justify-between items-center p-4 bg-gray-50 rounded-xl" },
+                                        React.createElement('span', { className: "text-gray-600" }, "Total Correct"),
+                                        React.createElement('span', { className: "font-bold text-green-600" }, `${trials.filter(t => t.isCorrect).length}`)
+                                    ),
+                                    React.createElement('div', { className: "flex justify-between items-center p-4 bg-gray-50 rounded-xl" },
+                                        React.createElement('span', { className: "text-gray-600" }, "Accuracy"),
+                                        React.createElement('span', { className: "font-bold text-blue-600" }, `${Math.round((trials.filter(t => t.isCorrect).length / trials.length) * 100)}%`)
                                     )
                                 )
                             )
