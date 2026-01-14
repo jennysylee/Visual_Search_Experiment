@@ -82,7 +82,8 @@
                         });
                     }
                 });
-                setTrials(newTrials.sort(() => Math.random() - 0.5));
+                const shuffled = newTrials.sort(() => Math.random() - 0.5);
+                setTrials(shuffled);
                 setCurrentTrialIdx(0);
                 setState(ExperimentState.INSTRUCTIONS);
             };
@@ -155,13 +156,12 @@
 
                 setTimeout(() => {
                     setFeedbackMessage(null);
-                    const nextIdx = currentTrialIdx + 1;
-                    if (nextIdx >= trials.length) {
+                    if (currentTrialIdx + 1 >= trials.length) {
                         setState(ExperimentState.RESULTS);
                     } else {
-                        setCurrentTrialIdx(nextIdx);
+                        setCurrentTrialIdx(prev => prev + 1);
                     }
-                }, 1000);
+                }, 800);
             }, [state, currentTrialIdx, trials]);
 
             useEffect(() => {
@@ -173,9 +173,9 @@
 
             useEffect(() => {
                 if (state === ExperimentState.FEEDBACK && feedbackMessage === null) {
-                    if (currentTrialIdx < trials.length && trials.length > 0) {
+                    if (currentTrialIdx < trials.length) {
                         nextTrial();
-                    } else if (trials.length > 0) {
+                    } else {
                         setState(ExperimentState.RESULTS);
                     }
                 }
@@ -197,7 +197,7 @@
             const downloadResults = () => {
                 const headers = ['Participant', 'Trial', 'SetSize', 'TargetPresent', 'Response', 'RT', 'Correct'];
                 const rows = trials.map((t, idx) => [
-                    participantId, idx + 1, t.setSize, t.targetPresent ? 'Yes' : 'No', t.response, t.rt, t.isCorrect ? '1' : '0'
+                    participantId, idx + 1, t.setSize, t.targetPresent ? 'Yes' : 'No', t.response || 'N/A', t.rt || 0, t.isCorrect ? '1' : '0'
                 ]);
                 const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -220,7 +220,14 @@
                 });
             }, [trials]);
 
-            return React.createElement('div', { className: "flex flex-col items-center justify-center min-h-screen p-4 font-sans" },
+            // Safe progress calculation
+            const progress = useMemo(() => {
+                if (!trials.length) return 0;
+                if (state === ExperimentState.RESULTS) return 100;
+                return (currentTrialIdx / trials.length) * 100;
+            }, [currentTrialIdx, trials.length, state]);
+
+            return React.createElement('div', { className: "flex flex-col items-center justify-center min-h-screen p-4 font-sans bg-gray-50" },
                 React.createElement('div', { className: "w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden min-h-[600px] flex flex-col border border-gray-100 relative" },
                     React.createElement('div', { className: "bg-gray-800 text-white px-6 py-4 flex justify-between items-center z-10" },
                         React.createElement('h1', { className: "text-xl font-bold tracking-tight" }, "Visual Search Lab"),
@@ -309,21 +316,21 @@
                                     ),
                                     React.createElement('div', { className: "flex justify-between items-center p-4 bg-gray-50 rounded-xl" },
                                         React.createElement('span', { className: "text-gray-600" }, "Accuracy"),
-                                        React.createElement('span', { className: "font-bold text-blue-600" }, `${Math.round((trials.filter(t => t.isCorrect).length / trials.length) * 100)}%`)
+                                        React.createElement('span', { className: "font-bold text-blue-600" }, `${trials.length > 0 ? Math.round((trials.filter(t => t.isCorrect).length / trials.length) * 100) : 0}%`)
                                     )
                                 )
                             )
                         )
                     ),
                     React.createElement('div', { className: "absolute bottom-0 left-0 w-full h-1 bg-gray-100" },
-                        React.createElement('div', { className: "h-full bg-blue-500 transition-all duration-300", style: { width: `${state === ExperimentState.RESULTS ? 100 : (Math.min(currentTrialIdx, trials.length) / trials.length) * 100}%` } })
+                        React.createElement('div', { className: "h-full bg-blue-500 transition-all duration-300", style: { width: `${progress}%` } })
                     )
                 )
             );
         };
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
-    </script>
-</body>
+            const root = createRoot(document.getElementById('root'));
+            root.render(React.createElement(App));
+        </script>
+    </body>
 </html>
