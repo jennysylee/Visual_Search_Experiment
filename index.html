@@ -20,7 +20,7 @@
     <div id="root"></div>
 
     <script type="module">
-        import React, { useState, useEffect, useCallback, useMemo } from 'react';
+        import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
         import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -63,6 +63,8 @@
             const [currentTrialIdx, setCurrentTrialIdx] = useState(0);
             const [currentStimuli, setCurrentStimuli] = useState([]);
             const [feedbackMessage, setFeedbackMessage] = useState(null);
+            
+            const trialInProgress = useRef(false);
 
             const startExperiment = () => {
                 if (!participantId.trim()) return alert("Please enter a participant number.");
@@ -105,6 +107,7 @@
                 
                 setTimeout(() => {
                     setState(ExperimentState.TRIAL);
+                    trialInProgress.current = true;
                     setTrials(prev => {
                         const updated = [...prev];
                         updated[currentTrialIdx].startTime = Date.now();
@@ -114,26 +117,37 @@
             }, [currentTrialIdx, trials, generateStimuli]);
 
             const handleResponse = useCallback((pressed) => {
-                if (state !== ExperimentState.TRIAL) return;
+                if (state !== ExperimentState.TRIAL || !trialInProgress.current) return;
+                trialInProgress.current = false;
+                
                 const endTime = Date.now();
                 const trial = trials[currentTrialIdx];
                 const rt = endTime - trial.startTime;
                 let isCorrect = false;
                 let responseStr = 'timeout';
+                
                 if (pressed !== null) {
                     responseStr = pressed ? 'present' : 'absent';
                     isCorrect = pressed === trial.targetPresent;
                 }
+                
                 setTrials(prev => {
                     const updated = [...prev];
                     updated[currentTrialIdx] = { ...updated[currentTrialIdx], endTime, rt, response: responseStr, isCorrect };
                     return updated;
                 });
+
                 setFeedbackMessage(pressed === null ? "Too Slow!" : (isCorrect ? "Correct!" : "Incorrect"));
                 setState(ExperimentState.FEEDBACK);
+
                 setTimeout(() => {
                     setFeedbackMessage(null);
-                    setCurrentTrialIdx(prev => prev + 1);
+                    const nextIdx = currentTrialIdx + 1;
+                    if (nextIdx >= trials.length) {
+                        setState(ExperimentState.RESULTS);
+                    } else {
+                        setCurrentTrialIdx(nextIdx);
+                    }
                 }, 800);
             }, [state, currentTrialIdx, trials]);
 
@@ -144,11 +158,16 @@
                 }
             }, [state, handleResponse]);
 
+            // Triggers next trial when trial index updates and we aren't at the end
             useEffect(() => {
                 if (state === ExperimentState.FEEDBACK && feedbackMessage === null) {
-                    nextTrial();
+                    if (currentTrialIdx < trials.length) {
+                        nextTrial();
+                    } else {
+                        setState(ExperimentState.RESULTS);
+                    }
                 }
-            }, [state, feedbackMessage, nextTrial]);
+            }, [currentTrialIdx, state, feedbackMessage, nextTrial, trials.length]);
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -195,7 +214,7 @@
                         React.createElement('h1', { className: "text-xl font-bold tracking-tight" }, "Visual Search Lab"),
                         React.createElement('div', { className: "flex items-center gap-4" },
                             (state === ExperimentState.FIXATION || state === ExperimentState.TRIAL || state === ExperimentState.FEEDBACK) && 
-                            React.createElement('span', { className: "text-xs font-medium text-gray-400" }, `Trial ${currentTrialIdx + 1} / ${trials.length}`),
+                            React.createElement('span', { className: "text-xs font-medium text-gray-400" }, `Trial ${Math.min(currentTrialIdx + 1, trials.length)} / ${trials.length}`),
                             participantId && React.createElement('span', { className: "text-sm bg-gray-700 px-3 py-1 rounded-full border border-gray-600" }, `ID: ${participantId}`)
                         )
                     ),
@@ -281,7 +300,7 @@
                         )
                     ),
                     React.createElement('div', { className: "absolute bottom-0 left-0 w-full h-1 bg-gray-100" },
-                        React.createElement('div', { className: "h-full bg-blue-500 transition-all duration-300", style: { width: `${state === ExperimentState.RESULTS ? 100 : ((currentTrialIdx) / trials.length) * 100}%` } })
+                        React.createElement('div', { className: "h-full bg-blue-500 transition-all duration-300", style: { width: `${state === ExperimentState.RESULTS ? 100 : (Math.min(currentTrialIdx, trials.length) / trials.length) * 100}%` } })
                     )
                 )
             );
