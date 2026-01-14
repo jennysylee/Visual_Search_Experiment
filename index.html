@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Search Task Experiment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .page {
+            display: none;
+            padding: 40px;
+            min-height: 600px;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ===== PARTICIPANT ENTRY PAGE ===== */
+        .entry-page {
+            text-align: center;
+        }
+
+        .entry-page h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .entry-page p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .input-group {
+            margin: 30px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input {
+            padding: 10px 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+            text-align: center;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+        }
+
+        .button-group {
+            margin-top: 40px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #1976D2;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* ===== EXPERIMENT PAGE ===== */
+        .experiment-page {
+            text-align: center;
+        }
+
+        .header {
+            background: #2196F3;
+            color: white;
+            padding: 20px;
+            margin: -40px -40px 30px -40px;
+        }
+
+        .header h2 {
+            margin-bottom: 10px;
+        }
+
+        .participant-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .fixation-point {
+            width: 20px;
+            height: 20px;
+            background: black;
+            border-radius: 50%;
+            margin: 30px auto;
+            display: none;
+        }
+
+        .fixation-point.show {
+            display: block;
+        }
+
+        .stimulus-display {
+            width: 100%;
+            height: 400px;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+            margin: 30px 0;
+            display: none;
+        }
+
+        .stimulus-display.show {
+            display: block;
+        }
+
+        .stimulus {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: default;
+            user-select: none;
+        }
+
+        .stimulus.target {
+            color: #FF6B6B;
+            font-weight: bold;
+        }
+
+        .stimulus.distractor {
+            color: #4ECDC4;
+        }
+
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            color: #333;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .trial-info {
+            margin: 20px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .response-buttons {
+            margin: 30px 0;
+        }
+
+        .response-buttons button {
+            margin: 0 10px;
+            min-width: 150px;
+        }
+
+        .feedback {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .feedback.correct {
+            background: #c8e6c9;
+            color: #2e7d32;
+            display: block;
+        }
+
+        .feedback.incorrect {
+            background: #ffcdd2;
+            color: #c62828;
+            display: block;
+        }
+
+        .feedback.timeout {
+            background: #fff9c4;
+            color: #f57f17;
+            display: block;
+        }
+
+        /* ===== RESULTS PAGE ===== */
+        .results-page {
+            text-align: center;
+        }
+
+        .results-page h2 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .results-summary {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .result-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .result-value {
+            color: #2196F3;
+            font-weight: bold;
+        }
+
+        .performance-by-setsize {
+            margin: 30px 0;
+        }
+
+        .performance-by-setsize h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .setsize-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            background: #f9f9f9;
+            margin: 5px 0;
+            padding: 10px 15px;
+            border-radius: 4px;
+        }
+
+        .download-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #ddd;
+        }
+
+        .data-display {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: left;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            min-width: 150px;
+        }
+
+        @media (max-width: 768px) {
+            .page {
+                padding: 20px;
+            }
+
+            .stimulus-display {
+                height: 300px;
+            }
+
+            .stimulus {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- PARTICIPANT ENTRY PAGE -->
+        <div class="page entry-page active">
+            <h1>Visual Search Task Experiment</h1>
+            <p>Welcome to the visual search task. Please enter your participant number to begin.</p>
+            
+            <div class="input-group">
+                <label for="participantNumber">Participant Number (3 digits):</label>
+                <input 
+                    type="number" 
+                    id="participantNumber" 
+                    min="0" 
+                    max="999" 
+                    placeholder="e.g., 001"
+                    required
+                >
+            </div>
+            
+            <div class="instructions">
+                <h3>Task Instructions:</h3>
+                <p>You will be shown a fixation point, followed by a grid of colored shapes.</p>
+                <p>Your task is to determine if a <strong style="color: #FF6B6B;">red target (●)</strong> is present among the <strong style="color: #4ECDC4;">blue distractors (●)</strong>.</p>
+                <p><strong>Press SPACE if target is present</strong></p>
+                <p><strong>Press N if target is NOT present</strong></p>
+                <p>Try to respond as quickly and accurately as possible!</p>
+            </div>
+            
+            <div class="button-group">
+                <button onclick="startExperiment()">Start Experiment</button>
+            </div>
+        </div>
+
+        <!-- EXPERIMENT PAGE -->
+        <div class="page experiment-page">
+            <div class="header">
+                <h2>Visual Search Task</h2>
+                <div class="participant-info">Participant: <span id="displayParticipant">---</span></div>
+            </div>
+
+            <div class="fixation-point"></div>
+            
+            <div class="trial-info" id="trialInfo"></div>
+
+            <div class="stimulus-display" id="stimulusDisplay"></div>
+
+            <div class="instructions" id="responseInstructions" style="display: none;">
+                <p><strong>Press SPACE</strong> if target is present<br>
+                   <strong>Press N</strong> if target is NOT present</p>
+            </div>
+
+            <div class="feedback" id="feedback"></div>
+
+            <div class="response-buttons" id="responseButtons" style="display: none;">
+                <button onclick="respondPresent()">Present (SPACE)</button>
+                <button onclick="respondAbsent()">Absent (N)</button>
+            </div>
+        </div>
+
+        <!-- RESULTS PAGE -->
+        <div class="page results-page">
+            <h2>Experiment Complete!</h2>
+            
+            <div class="results-summary">
+                <div class="result-item">
+                    <span class="result-label">Participant Number:</span>
+                    <span class="result-value" id="resultParticipant">---</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Total Trials:</span>
+                    <span class="result-value" id="totalTrials">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Correct Responses:</span>
+                    <span class="result-value" id="correctResponses">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Accuracy:</span>
+                    <span class="result-value" id="accuracy">0%</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Overall Mean RT:</span>
+                    <span class="result-value" id="meanRT">0 ms</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Median RT:</span>
+                    <span class="result-value" id="medianRT">0 ms</span>
+                </div>
+            </div>
+
+            <div class="performance-by-setsize">
+                <h3>Performance by Set Size:</h3>
+                <div id="performanceTable"></div>
+            </div>
+
+            <div class="download-section">
+                <h3>Export Data:</h3>
+                <div class="data-display" id="csvData"></div>
+                <div class="button-group">
+                    <button onclick="downloadCSV()">Download CSV</button>
+                    <button onclick="copyToClipboard()">Copy to Clipboard</button>
+                    <button onclick="startOver()">Start New Session</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE MANAGEMENT =====
+        let currentParticipant = null;
+        let trials = [];
+        let currentTrial = 0;
+        let isResponseAllowed = false;
+        let trialStartTime = 0;
+        const TOTAL_TRIALS = 50;
+        const SET_SIZES = [5, 10, 15, 20];
+        const TIMEOUT_MS = 4000;
+
+        // ===== STIMULUS GENERATION =====
+        function generateStimuli() {
+            const targetPresent = Math.random() > 0.5;
+            const setSize = SET_SIZES[Math.floor(Math.random() * SET_SIZES.length)];
+            const stimuli = [];
+
+            // Add target if present
+            if (targetPresent) {
+                stimuli.push({
+                    type: 'target',
+                    symbol: '●',
+                    color: '#FF6B6B'
+                });
+            }
+
+            // Add distractors
+            const distractorCount = targetPresent ? setSize - 1 : setSize;
+            for (let i = 0; i < distractorCount; i++) {
+                stimuli.push({
+                    type: 'distractor',
+                    symbol: '●',
+                    color: '#4ECDC4'
+                });
+            }
+
+            return {
+                targetPresent,
+                setSize,
+                stimuli: stimuli.sort(() => Math.random() - 0.5)
+            };
+        }
+
+        function displayStimuli(stimuli) {
+            const display = document.getElementById('stimulusDisplay');
+            display.innerHTML = '';
+            display.classList.add('show');
+
+            const width = display.offsetWidth;
+            const height = display.offsetHeight;
+            const cols = Math.ceil(Math.sqrt(stimuli.length));
+            const spacing = Math.min(width, height) / (cols + 1);
+
+            stimuli.forEach((stim, index) => {
+                const row = Math.floor(index / cols);
+                const col = index % cols;
+                const x = spacing * (col + 1) - 25;
+                const y = spacing * (row + 1) - 25;
+
+                const element = document.createElement('div');
+                element.className = `stimulus ${stim.type}`;
+                element.textContent = stim.symbol;
+                element.style.color = stim.color;
+                element.style.left = x + 'px';
+                element.style.top = y + 'px';
+                display.appendChild(element);
+            });
+        }
+
+        // ===== TRIAL MANAGEMENT =====
+        function startExperiment() {
+            const input = document.getElementById('participantNumber');
+            const value = input.value.trim();
+
+            if (!value) {
+                alert('Please enter a participant number');
+                return;
+            }
+
+            if (value.length !== 3 || isNaN(value)) {
+                alert('Please enter a valid 3-digit participant number');
+                return;
+            }
+
+            currentParticipant = value.padStart(3, '0');
+            document.getElementById('displayParticipant').textContent = currentParticipant;
+            document.getElementById('resultParticipant').textContent = currentParticipant;
+
+            switchPage('experiment-page');
+            runNextTrial();
+        }
+
+        function runNextTrial() {
+            if (currentTrial >= TOTAL_TRIALS) {
+                endExperiment();
+                return;
+            }
+
+            const trialData = generateStimuli();
+            const trial = {
+                number: currentTrial + 1,
+                targetPresent: trialData.targetPresent ? 1 : 0,
+                setSize: trialData.setSize,
+                response: null,
+                correct: null,
+                rt: null,
+                timeout: false
+            };
+
+            trials.push(trial);
+
+            document.getElementById('trialInfo').textContent = 
+                `Trial ${trial.number} / ${TOTAL_TRIALS} - Set Size: ${trial.setSize}`;
+
+            // Show fixation point
+            const fixation = document.querySelector('.fixation-point');
+            fixation.classList.add('show');
+            document.getElementById('stimulusDisplay').classList.remove('show');
+            document.getElementById('feedback').className = 'feedback';
+            document.getElementById('responseButtons').style.display = 'none';
+            document.getElementById('responseInstructions').style.display = 'none';
+
+            setTimeout(() => {
+                fixation.classList.remove('show');
+                displayStimuli(trialData.stimuli);
+                document.getElementById('responseInstructions').style.display = 'block';
+                isResponseAllowed = true;
+                trialStartTime = Date.now();
+
+                // Set timeout
+                setTimeout(() => {
+                    if (isResponseAllowed) {
+                        trial.timeout = true;
+                        recordResponse(null, trial);
+                    }
+                }, TIMEOUT_MS);
+            }, 500);
+
+            currentTrial++;
+
+            // Enable keyboard responses
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function handleKeyPress(event) {
+            if (!isResponseAllowed) return;
+
+            if (event.code === 'Space') {
+                event.preventDefault();
+                respondPresent();
+            } else if (event.key.toLowerCase() === 'n') {
+                event.preventDefault();
+                respondAbsent();
+            }
+        }
+
+        function respondPresent() {
+            if (!isResponseAllowed) return;
+            recordResponse(true, trials[currentTrial - 1]);
+        }
+
+        function respondAbsent() {
+            if (!isResponseAllowed) return;
+            recordResponse(false, trials[currentTrial - 1]);
+        }
+
+        function recordResponse(response, trial) {
+            isResponseAllowed = false;
+            const rt = Date.now() - trialStartTime;
+
+            trial.response = response;
+            trial.rt = rt;
+            trial.correct = (response === true && trial.targetPresent === 1) ||
+                           (response === false && trial.targetPresent === 0) ? 1 : 0;
+
+            // Show feedback
+            const feedback = document.getElementById('feedback');
+            document.getElementById('stimulusDisplay').classList.remove('show');
+            document.getElementById('responseInstructions').style.display = 'none';
+
+            if (trial.timeout) {
+                feedback.textContent = 'Too Late! ⏱️ (No response within time limit)';
+                feedback.className = 'feedback timeout';
+            } else if (trial.correct) {
+                feedback.textContent = `Correct! ✓ (${rt} ms)`;
+                feedback.className = 'feedback correct';
+            } else {
+                feedback.textContent = `Incorrect! ✗ (${rt} ms)`;
+                feedback.className = 'feedback incorrect';
+            }
+
+            setTimeout(() => {
+                runNextTrial();
+            }, 1500);
+        }
+
+        // ===== RESULTS ANALYSIS =====
+        function endExperiment() {
+            switchPage('results-page');
+            calculateResults();
+        }
+
+        function calculateResults() {
+            const validTrials = trials.filter(t => !t.timeout && t.rt !== null);
+            const correctTrials = validTrials.filter(t => t.correct === 1);
+
+            const accuracy = validTrials.length > 0 
+                ? Math.round((correctTrials.length / validTrials.length) * 100) 
+                : 0;
+
+            const rts = validTrials.map(t => t.rt);
+            const meanRT = rts.length > 0 
+                ? Math.round(rts.reduce((a, b) => a + b) / rts.length) 
+                : 0;
+
+            rts.sort((a, b) => a - b);
+            const medianRT = rts.length > 0 
+                ? rts[Math.floor(rts.length / 2)] 
+                : 0;
+
+            document.getElementById('totalTrials').textContent = trials.length;
+            document.getElementById('correctResponses').textContent = correctTrials.length;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            document.getElementById('meanRT').textContent = meanRT + ' ms';
+            document.getElementById('medianRT').textContent = medianRT + ' ms';
+
+            // Performance by set size
+            const performanceTable = document.getElementById('performanceTable');
+            performanceTable.innerHTML = '';
+
+            SET_SIZES.forEach(size => {
+                const sizeTrials = validTrials.filter(t => t.setSize === size);
+                const sizeCorrect = sizeTrials.filter(t => t.correct === 1).length;
+                const sizeAccuracy = sizeTrials.length > 0 
+                    ? Math.round((sizeCorrect / sizeTrials.length) * 100) 
+                    : 0;
+                const sizeRT = sizeTrials.length > 0 
+                    ? Math.round(sizeTrials.reduce((sum, t) => sum + t.rt, 0) / sizeTrials.length) 
+                    : 0;
+
+                const row = document.createElement('div');
+                row.className = 'setsize-row';
+                row.innerHTML = `
+                    <span>Set Size ${size}:</span>
+                    <span>${sizeTrials.length} trials</span>
+                    <span>${sizeAccuracy}% correct</span>
+                    <span>${sizeRT} ms</span>
+                `;
+                performanceTable.appendChild(row);
+            });
+
+            // Generate CSV data
+            generateCSV();
+        }
+
+        function generateCSV() {
+            let csv = 'PARTICIPANT DATA\n';
+            csv += `Participant,${currentParticipant}\n`;
+            csv += `Total Trials,${trials.length}\n`;
+            csv += `Correct,${trials.filter(t => t.correct === 1).length}\n`;
+            csv += `Accuracy,${document.getElementById('accuracy').textContent}\n`;
+            csv += `Mean RT,${document.getElementById('meanRT').textContent}\n`;
+            csv += `Median RT,${document.getElementById('medianRT').textContent}\n\n`;
+
+            csv += 'TRIAL-BY-TRIAL DATA\n';
+            csv += 'Trial,TargetPresent,SetSize,Response,Correct,RT(ms),Timeout\n';
+
+            trials.forEach((trial, index) => {
+                const response = trial.response === null ? 'None' : (trial.response ? 'Present' : 'Absent');
+                const correct = trial.correct === null ? 'N/A' : (trial.correct ? 'Yes' : 'No');
+                const rt = trial.rt === null ? 'N/A' : trial.rt;
+                csv += `${trial.number},${trial.targetPresent === 1 ? 'Yes' : 'No'},${trial.setSize},${response},${correct},${rt},${trial.timeout ? 'Yes' : 'No'}\n`;
+            });
+
+            document.getElementById('csvData').textContent = csv;
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function switchPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelector('.' + pageName).classList.add('active');
+        }
+
+        function downloadCSV() {
+            const csv = document.getElementById('csvData').textContent;
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `visual_search_participant_${currentParticipant}_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function copyToClipboard() {
+            const csv = document.getElementById('csvData').textContent;
+            navigator.clipboard.writeText(csv).then(() => {
+                alert('Data copied to clipboard!');
+            });
+        }
+
+        function startOver() {
+            currentParticipant = null;
+            trials = [];
+            currentTrial = 0;
+            isResponseAllowed = false;
+            document.getElementById('participantNumber').value = '';
+            switchPage('entry-page');
+        }
+
+        // Keyboard support for response buttons
+        document.addEventListener('keydown', handleKeyPress);
+    </script>
+</body>
+</html>
